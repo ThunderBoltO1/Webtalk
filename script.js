@@ -161,3 +161,10 @@ channel.bind('video-event', (data) => {
             break;
     }
 });
+
+// ตัวอย่างทดสอบ YouTube API (สามารถลบออกได้หลังทดสอบ)
+/*
+fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=lofi&type=video&key=AIzaSyDC80-0eP7mC4kFBRlcIsLqq82yYoH2osw`)
+  .then(res => res.json())
+  .then(data => console.log('YouTube API test:', data));
+*/

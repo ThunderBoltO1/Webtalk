@@ -113,3 +113,20 @@ channel.bind('video-event', (data) => {
             break;
     }
 });
+document.getElementById('send-message').addEventListener('click', async () => {
+    const input = document.getElementById('message-input');
+    const text = input.value.trim();
+
+    if (text === '') return;
+
+    try {
+        await db.collection('messages').add({
+            text: text,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        input.value = ''; // clear input
+    } catch (error) {
+        console.error('Error adding message:', error);
+    }
+});

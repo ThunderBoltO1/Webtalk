@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Watch Party</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center p-4 font-sans">
+
+    <h1 class="text-4xl font-bold mb-4">YouTube Watch Party</h1>
+
+    <div class="w-full max-w-4xl flex flex-col lg:flex-row gap-4">
+        
+        <!-- Video and Search Section -->
+        <div class="flex-grow">
+            <div id="video-container" class="aspect-video bg-black mb-4">
+                <div id="player"></div>
+            </div>
+
+            <div id="controls" class="flex gap-2 mb-4">
+                <input type="text" id="search-query" placeholder="Search for a video..." class="flex-grow bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <button id="search-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg">Search</button>
+            </div>
+
+            <div id="search-results" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+        </div>
+
+        <!-- Chat Section -->
+        <div id="chat-container" class="w-full lg:w-80 bg-gray-800 rounded-lg p-4 flex flex-col">
+            <h2 class="text-2xl font-bold mb-4">Chat</h2>
+            <div id="messages" class="flex-grow h-64 overflow-y-auto mb-4 bg-gray-900 rounded-lg p-2 space-y-2"></div>
+            <div class="flex gap-2">
+                <input type="text" id="message-input" placeholder="Type a message..." class="flex-grow bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <button id="send-message" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -6,13 +6,16 @@ const pusher = new Pusher('YOUR_PUSHER_KEY', { // IMPORTANT: Replace with your P
 const channel = pusher.subscribe('watch-party');
 
 async function triggerEvent(event, data) {
-    await fetch('/api/pusher/trigger', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ channel: 'watch-party', event, data }),
-    });
+    // ใช้ triggerEvent เฉพาะ video-event เท่านั้น
+    if (event === 'video-event') {
+        await fetch('/api/pusher/trigger', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ channel: 'watch-party', event, data }),
+        });
+    }
 }
 
 // ----------------------
@@ -51,6 +54,10 @@ const sendMessageBtn = document.getElementById('send-message');
 sendMessageBtn.addEventListener('click', async () => {
     const text = messageInput.value.trim();
     if (text === '' || !username) return;
+    if (typeof db === 'undefined') {
+        alert('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณารีเฟรชหน้าเว็บ');
+        return;
+    }
     try {
         await db.collection('messages').add({
             text: text,
@@ -60,6 +67,7 @@ sendMessageBtn.addEventListener('click', async () => {
         messageInput.value = '';
     } catch (error) {
         console.error('Error adding message:', error);
+        alert('เกิดข้อผิดพลาดในการส่งข้อความ');
     }
 });
 
@@ -76,12 +84,19 @@ function clearMessages() {
     messages.innerHTML = '';
 }
 
-db.collection('messages').orderBy('timestamp').onSnapshot(snapshot => {
-    clearMessages();
-    snapshot.forEach(doc => {
-        renderMessage(doc);
+if (typeof db !== 'undefined') {
+    db.collection('messages').orderBy('timestamp').onSnapshot(snapshot => {
+        clearMessages();
+        snapshot.forEach(doc => {
+            renderMessage(doc);
+        });
+    }, err => {
+        console.error('Firestore listen error:', err);
+        alert('ไม่สามารถเชื่อมต่อฐานข้อมูลแบบเรียลไทม์ได้');
     });
-});
+} else {
+    alert('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณารีเฟรชหน้าเว็บ');
+}
 
 // YouTube Player
 let player;
@@ -144,25 +159,7 @@ function onPlayerStateChange(event) {
     }
 }
 
-channel.bind('video-event', (data) => {
-    switch (data.type) {
-        case 'load':
-            player.loadVideoById(data.videoId);
-            break;
-        case 'play':
-            // Ensure the player is ready before seeking
-            if (player && typeof player.seekTo === 'function') {
-                player.seekTo(data.currentTime, true);
-                player.playVideo();
-            }
-            break;
-        case 'pause':
-            if (player && typeof player.pauseVideo === 'function') {
-                player.pauseVideo();
-            }
-            break;
-    }
-});
+// (ลบหรือคอมเมนต์ channel.bind('chat-message', ...); ออก เพราะไม่ใช้ Pusher กับแชท)
 
 // ตัวอย่างทดสอบ YouTube API (สามารถลบออกได้หลังทดสอบ)
 /*

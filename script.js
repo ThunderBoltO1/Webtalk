@@ -106,6 +106,7 @@ searchBtn.addEventListener('click', () => {
     const query = searchInput.value;
     if (query) {
         searchYouTube(query);
+        searchInput.value = '';
     }
 });
 
@@ -113,6 +114,7 @@ async function searchYouTube(query) {
     const response = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&type=video&key=${YOUTUBE_API_KEY}`);
     const data = await response.json();
     displaySearchResults(data.items);
+    // searchInput.value = ''; // ไม่ต้องล้างซ้ำตรงนี้ เพราะล้างใน click handler แล้ว
 }
 
 function displaySearchResults(videos) {

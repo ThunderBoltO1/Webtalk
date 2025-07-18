@@ -1,16 +1,17 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const Pusher = require('pusher');
+const path = require('path');
 
 const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
 const pusher = new Pusher({
-  appId: process.env.PUSHER_APP_ID,
-  key: process.env.PUSHER_KEY,
-  secret: process.env.PUSHER_SECRET,
-  cluster: process.env.PUSHER_CLUSTER,
+  appId: "2024275",
+  key: "37361f4cd7d0f575faac",
+  secret: "453020ddb6516ad38f7e",
+  cluster: "ap1",
   useTLS: true
 });
 

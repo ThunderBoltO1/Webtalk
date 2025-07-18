@@ -24,9 +24,20 @@ let username = '';
 const nameModal = document.getElementById('name-modal');
 const usernameInput = document.getElementById('username-input');
 const enterChatBtn = document.getElementById('enter-chat-btn');
+const changeNameBtn = document.getElementById('change-name-btn');
+
+// ฟังก์ชันสำหรับบันทึกชื่อใน localStorage
+function saveUsername(name) {
+    localStorage.setItem('watchparty-username', name);
+}
+// ฟังก์ชันสำหรับโหลดชื่อจาก localStorage
+function loadUsername() {
+    return localStorage.getItem('watchparty-username') || '';
+}
 
 function showNameModal() {
     nameModal.style.display = 'flex';
+    usernameInput.value = '';
 }
 function hideNameModal() {
     nameModal.style.display = 'none';
@@ -36,14 +47,28 @@ enterChatBtn.addEventListener('click', () => {
     const name = usernameInput.value.trim();
     if (name) {
         username = name;
+        saveUsername(name);
         hideNameModal();
     } else {
         usernameInput.classList.add('ring-2', 'ring-red-500');
     }
 });
 
-// ป้องกันการใช้งานแชทก่อนกรอกชื่อ
-window.addEventListener('DOMContentLoaded', showNameModal);
+// เมื่อโหลดหน้าเว็บ ให้เช็ค localStorage
+window.addEventListener('DOMContentLoaded', () => {
+    const saved = loadUsername();
+    if (saved) {
+        username = saved;
+        hideNameModal();
+    } else {
+        showNameModal();
+    }
+});
+
+// ปุ่มเปลี่ยนชื่อ
+changeNameBtn.addEventListener('click', () => {
+    showNameModal();
+});
 
 // ----------------------
 // Firestore Chat Setup (with username)

@@ -247,15 +247,58 @@ if (typeof db !== 'undefined') {
 
 // YouTube Player
 let player;
+let playerReady = false;
+let pendingVideoEvent = null;
+
 function onYouTubeIframeAPIReady() {
     player = new YT.Player('player', {
         height: '360',
         width: '640',
         videoId: 'M7lc1UVf-VE', // Default video
         events: {
+            'onReady': () => {
+                playerReady = true;
+                // ถ้ามี event ที่รอไว้ ให้ execute เลย
+                if (pendingVideoEvent) {
+                    handleVideoEvent(pendingVideoEvent);
+                    pendingVideoEvent = null;
+                }
+            },
             'onStateChange': onPlayerStateChange
         }
     });
+}
+
+// ฟังก์ชันนี้ใช้สำหรับ handle event จาก Pusher
+function handleVideoEvent(data) {
+    if (!playerReady) {
+        pendingVideoEvent = data;
+        return;
+    }
+    switch (data.type) {
+        case 'load':
+            // ถ้า videoId เดียวกับที่เล่นอยู่แล้ว ไม่ต้อง load ซ้ำ
+            if (player.getVideoData && player.getVideoData().video_id === data.videoId) return;
+            player.loadVideoById(data.videoId);
+            break;
+        case 'play':
+            // sync play เฉพาะเมื่อ player ไม่ได้เล่นอยู่
+            if (player && typeof player.seekTo === 'function') {
+                if (player.getPlayerState && player.getPlayerState() !== YT.PlayerState.PLAYING) {
+                    player.seekTo(data.currentTime, true);
+                    player.playVideo();
+                }
+            }
+            break;
+        case 'pause':
+            // sync pause เฉพาะเมื่อ player กำลังเล่น
+            if (player && typeof player.pauseVideo === 'function') {
+                if (player.getPlayerState && player.getPlayerState() === YT.PlayerState.PLAYING) {
+                    player.pauseVideo();
+                }
+            }
+            break;
+    }
 }
 
 const YOUTUBE_API_KEY = 'AIzaSyDC80-0eP7mC4kFBRlcIsLqq82yYoH2osw'; // IMPORTANT: Replace with your YouTube Data API key
@@ -310,3 +353,15 @@ function onPlayerStateChange(event) {
 
 // ตัวอย่างทดสอบ YouTube API (สามารถลบออกได้หลังทดสอบ)
 // (ลบออก)
+
+// Popup รายชื่อผู้เข้าร่วม
+const userListPopupBtn = document.getElementById('user-list-popup-btn');
+const userListPopup = document.getElementById('user-list-popup');
+const closeUserListPopup = document.getElementById('close-user-list-popup');
+
+userListPopupBtn.addEventListener('click', () => {
+    userListPopup.classList.remove('hidden');
+});
+closeUserListPopup.addEventListener('click', () => {
+    userListPopup.classList.add('hidden');
+});

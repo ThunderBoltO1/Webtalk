@@ -22,62 +22,79 @@
   const db = firebase.firestore();
 </script>
 </head>
-<body class="bg-gray-900 text-white flex flex-col items-center p-4 font-sans">
+<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen text-white flex flex-col items-center p-4 font-sans">
 
     <!-- ชื่อผู้ใช้ที่มุมขวาบน -->
-    <div id="user-info-bar" class="fixed top-4 right-4 flex items-center gap-2 z-50">
+    <div id="user-info-bar" class="fixed top-4 right-4 flex items-center gap-2 z-50 bg-gray-800 bg-opacity-80 px-4 py-2 rounded-full shadow-lg border border-gray-700">
         <span id="current-username" class="font-bold text-yellow-400"></span>
-        <button id="change-name-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded-lg" style="display:none;">เปลี่ยนชื่อ</button>
+        <button id="change-name-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded-lg transition duration-200 shadow" style="display:none;">เปลี่ยนชื่อ</button>
     </div>
 
     <!-- Modal สำหรับกรอกชื่อ -->
-    <div id="name-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
-        <div class="bg-gray-800 p-8 rounded-lg flex flex-col items-center gap-4">
-            <h2 class="text-2xl font-bold mb-2">กรุณาใส่ชื่อของคุณ</h2>
-            <input type="text" id="username-input" placeholder="ชื่อของคุณ..." class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
-            <button id="enter-chat-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg">เข้าสู่ห้องแชท</button>
+    <div id="name-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50 transition-all duration-300">
+        <div class="bg-gray-800 p-8 rounded-2xl flex flex-col items-center gap-4 shadow-2xl border border-gray-700 animate-fadeIn">
+            <h2 class="text-2xl font-bold mb-2 text-purple-400">กรุณาใส่ชื่อของคุณ</h2>
+            <input type="text" id="username-input" placeholder="ชื่อของคุณ..." class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg transition duration-200">
+            <button id="enter-chat-btn" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-2 px-6 rounded-lg shadow transition duration-200">เข้าสู่ห้องแชท</button>
         </div>
     </div>
 
-    <h1 class="text-4xl font-bold mb-4">YouTube Watch Party</h1>
+    <h1 class="text-4xl font-extrabold mb-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 drop-shadow-lg">YouTube Watch Party</h1>
 
-    <div class="w-full max-w-4xl flex flex-col lg:flex-row gap-4">
-        
+    <div class="w-full max-w-5xl flex flex-col lg:flex-row gap-6">
         <!-- Video and Search Section -->
-        <div class="flex-grow">
-            <div id="video-container" class="aspect-video bg-black mb-4">
+        <div class="flex-grow bg-gray-800 rounded-2xl shadow-lg p-6 mb-6 lg:mb-0 border border-gray-700">
+            <div id="video-container" class="aspect-video bg-black mb-4 rounded-xl overflow-hidden shadow">
                 <div id="player"></div>
             </div>
 
             <div id="controls" class="flex gap-2 mb-4">
-                <input type="text" id="search-query" placeholder="Search for a video..." class="flex-grow bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
-                <button id="search-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg">Search</button>
+                <input type="text" id="search-query" placeholder="Search for a video..." class="flex-grow bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg transition duration-200 disabled:opacity-50">
+                <button id="search-btn" class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-2 px-6 rounded-lg shadow transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">Search</button>
             </div>
 
             <div id="search-results" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
         </div>
 
-        <!-- User List Sidebar -->
-        <div id="user-list-sidebar" class="w-full lg:w-56 bg-gray-800 rounded-lg p-4 flex flex-col mb-4 lg:mb-0 lg:ml-4">
-            <h2 class="text-xl font-bold mb-2">ผู้เข้าร่วม</h2>
-            <div id="user-list" class="space-y-2"></div>
+        <!-- User List Popup Button (ขวาล่าง) -->
+        <button id="user-list-popup-btn" class="fixed bottom-4 right-4 z-50 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-5 rounded-full shadow-lg flex items-center gap-2 transition duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6 3.87V4m0 0a4 4 0 00-8 0v16m8-16a4 4 0 018 0v16" /></svg>
+            ผู้เข้าร่วม
+        </button>
+        <!-- User List Popup -->
+        <div id="user-list-popup" class="hidden fixed bottom-20 right-4 z-50 bg-gray-800 rounded-2xl p-4 w-72 shadow-2xl border border-gray-700 animate-fadeIn">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-xl font-bold text-purple-400">ผู้เข้าร่วม</h2>
+                <button id="close-user-list-popup" class="text-gray-400 hover:text-white text-xl">✕</button>
+            </div>
+            <div id="user-list" class="space-y-2 min-h-[40px]">
+                <div id="user-list-empty" class="text-gray-400 text-center text-sm">ยังไม่มีผู้เข้าร่วม</div>
+            </div>
         </div>
 
         <!-- Chat Section -->
-        <div id="chat-container" class="w-full lg:w-80 bg-gray-800 rounded-lg p-4 flex flex-col">
-            <h2 class="text-2xl font-bold mb-4">Chat</h2>
-            <div id="messages" class="flex-grow max-h-96 h-64 overflow-y-auto mb-4 bg-gray-900 rounded-lg p-2 space-y-2"></div>
+        <div id="chat-container" class="w-full lg:w-96 bg-gray-800 rounded-2xl p-6 flex flex-col shadow-lg border border-gray-700">
+            <h2 class="text-2xl font-bold mb-4 text-pink-400">Chat</h2>
+            <div id="messages" class="flex-grow max-h-96 h-64 overflow-y-auto mb-4 bg-gray-900 rounded-lg p-2 space-y-2 border border-gray-700 shadow-inner">
+                <div id="messages-empty" class="text-gray-400 text-center text-sm">ยังไม่มีข้อความ</div>
+            </div>
             <div class="flex gap-2">
-                <input type="text" id="message-input" placeholder="Type a message..." class="flex-grow bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
-                <button id="send-message" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg">Send</button>
+                <input type="text" id="message-input" placeholder="Type a message..." class="flex-grow bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500 text-lg transition duration-200">
+                <button id="send-message" class="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-bold py-2 px-6 rounded-lg shadow transition duration-200">Send</button>
             </div>
         </div>
     </div>
 
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <script src="script.js"></script>
 
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fadeIn { animation: fadeIn 0.3s; }
+    </style>
     
 </body>
 </html>

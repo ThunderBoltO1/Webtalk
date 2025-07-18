@@ -15,24 +15,44 @@ async function triggerEvent(event, data) {
     });
 }
 
-// Chat
+// Firestore Chat Setup
 const messages = document.getElementById('messages');
 const messageInput = document.getElementById('message-input');
 const sendMessageBtn = document.getElementById('send-message');
 
-sendMessageBtn.addEventListener('click', () => {
-    const message = messageInput.value;
-    if (message) {
-        triggerEvent('chat-message', { message });
+// ส่งข้อความไป Firestore
+sendMessageBtn.addEventListener('click', async () => {
+    const text = messageInput.value.trim();
+    if (text === '') return;
+    try {
+        await db.collection('messages').add({
+            text: text,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
         messageInput.value = '';
+    } catch (error) {
+        console.error('Error adding message:', error);
     }
 });
 
-channel.bind('chat-message', (data) => {
+// ดึงข้อความจาก Firestore แบบเรียลไทม์
+function renderMessage(doc) {
     const item = document.createElement('div');
-    item.textContent = data.message;
+    item.textContent = doc.data().text;
     messages.appendChild(item);
     messages.scrollTop = messages.scrollHeight;
+}
+
+// clear messages ก่อนแสดงใหม่
+function clearMessages() {
+    messages.innerHTML = '';
+}
+
+db.collection('messages').orderBy('timestamp').onSnapshot(snapshot => {
+    clearMessages();
+    snapshot.forEach(doc => {
+        renderMessage(doc);
+    });
 });
 
 // YouTube Player
@@ -111,22 +131,5 @@ channel.bind('video-event', (data) => {
                 player.pauseVideo();
             }
             break;
-    }
-});
-document.getElementById('send-message').addEventListener('click', async () => {
-    const input = document.getElementById('message-input');
-    const text = input.value.trim();
-
-    if (text === '') return;
-
-    try {
-        await db.collection('messages').add({
-            text: text,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        input.value = ''; // clear input
-    } catch (error) {
-        console.error('Error adding message:', error);
     }
 });

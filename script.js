@@ -1,6 +1,6 @@
 // Pusher setup
-const pusher = new Pusher('YOUR_PUSHER_KEY', { // IMPORTANT: Replace with your Pusher key
-    cluster: 'YOUR_PUSHER_CLUSTER' // IMPORTANT: Replace with your Pusher cluster
+const pusher = new Pusher('37361f4cd7d0f575faac', { // IMPORTANT: Replace with your Pusher key
+    cluster: 'ap1' // IMPORTANT: Replace with your Pusher cluster
 });
 
 const channel = pusher.subscribe('watch-party');
@@ -51,6 +51,13 @@ const messages = document.getElementById('messages');
 const messageInput = document.getElementById('message-input');
 const sendMessageBtn = document.getElementById('send-message');
 
+// เพิ่มฟีเจอร์กด Enter เพื่อส่งข้อความ
+messageInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        sendMessageBtn.click();
+    }
+});
+
 sendMessageBtn.addEventListener('click', async () => {
     const text = messageInput.value.trim();
     if (text === '' || !username) return;
@@ -71,11 +78,26 @@ sendMessageBtn.addEventListener('click', async () => {
     }
 });
 
+// Escape HTML เพื่อป้องกัน XSS
+function escapeHTML(str) {
+    return str.replace(/[&<>'"]/g, function(tag) {
+        const charsToReplace = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        };
+        return charsToReplace[tag] || tag;
+    });
+}
+
 function renderMessage(doc) {
     const data = doc.data();
     const item = document.createElement('div');
-    const name = data.username || 'ไม่ระบุชื่อ';
-    item.textContent = `${name} : ${data.text}`;
+    const name = escapeHTML(data.username || 'ไม่ระบุชื่อ');
+    const text = escapeHTML(data.text);
+    item.textContent = `${name} : ${text}`;
     messages.appendChild(item);
     messages.scrollTop = messages.scrollHeight;
 }
@@ -162,8 +184,4 @@ function onPlayerStateChange(event) {
 // (ลบหรือคอมเมนต์ channel.bind('chat-message', ...); ออก เพราะไม่ใช้ Pusher กับแชท)
 
 // ตัวอย่างทดสอบ YouTube API (สามารถลบออกได้หลังทดสอบ)
-/*
-fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=lofi&type=video&key=AIzaSyDC80-0eP7mC4kFBRlcIsLqq82yYoH2osw`)
-  .then(res => res.json())
-  .then(data => console.log('YouTube API test:', data));
-*/
+// (ลบออก)

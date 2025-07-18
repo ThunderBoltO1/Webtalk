@@ -6,43 +6,22 @@
     <title>YouTube Watch Party</title>
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Firebase App (core) -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-
-<!-- Firebase Firestore -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-
 <script>
-  // TODO: กรอกค่า Firebase config จริงจากโปรเจกต์ของคุณที่นี่
-  // ดูค่าจาก Firebase Console > Project settings > General > Your apps
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY", // <-- กรอกค่า API Key จริง
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com", // <-- กรอกค่า Project ID จริง
-    projectId: "YOUR_PROJECT_ID", // <-- กรอกค่า Project ID จริง
-    storageBucket: "YOUR_PROJECT_ID.appspot.com", // <-- กรอกค่า Storage Bucket จริง
-    messagingSenderId: "YOUR_MSG_ID", // <-- กรอกค่า Messaging Sender ID จริง
-    appId: "YOUR_APP_ID" // <-- กรอกค่า App ID จริง
+    apiKey: "AIzaSyAt87NvEBKOTVrTJ4YBDPKINctAK4eYg_s",
+    authDomain: "webtalkparty.firebaseapp.com",
+    projectId: "webtalkparty",
+    storageBucket: "webtalkparty.appspot.com",
+    messagingSenderId: "8242421707",
+    appId: "1:8242421707:web:2a9efd443f9fc378d1e04e",
+    measurementId: "G-MNN7WK3ZTG"
   };
-
-  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 </script>
-<script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
-<script>
-
-  // Enable pusher logging - don't include this in production
-  Pusher.logToConsole = true;
-
-  var pusher = new Pusher('37361f4cd7d0f575faac', {
-    cluster: 'ap1'
-  });
-
-  var channel = pusher.subscribe('my-channel');
-  channel.bind('my-event', function(data) {
-    alert(JSON.stringify(data));
-  });
-</script>
+<script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 </head>
 <body class="bg-gray-900 text-white flex flex-col items-center p-4 font-sans">
 

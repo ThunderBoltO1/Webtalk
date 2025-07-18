@@ -8,7 +8,6 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyAt87NvEBKOTVrTJ4YBDPKINctAK4eYg_s",
@@ -25,6 +24,12 @@
 </head>
 <body class="bg-gray-900 text-white flex flex-col items-center p-4 font-sans">
 
+    <!-- ชื่อผู้ใช้ที่มุมขวาบน -->
+    <div id="user-info-bar" class="fixed top-4 right-4 flex items-center gap-2 z-50">
+        <span id="current-username" class="font-bold text-yellow-400"></span>
+        <button id="change-name-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded-lg" style="display:none;">เปลี่ยนชื่อ</button>
+    </div>
+
     <!-- Modal สำหรับกรอกชื่อ -->
     <div id="name-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
         <div class="bg-gray-800 p-8 rounded-lg flex flex-col items-center gap-4">
@@ -35,7 +40,6 @@
     </div>
 
     <h1 class="text-4xl font-bold mb-4">YouTube Watch Party</h1>
-    <button id="change-name-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded-lg mb-4">เปลี่ยนชื่อ</button>
 
     <div class="w-full max-w-4xl flex flex-col lg:flex-row gap-4">
         
@@ -53,10 +57,16 @@
             <div id="search-results" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
         </div>
 
+        <!-- User List Sidebar -->
+        <div id="user-list-sidebar" class="w-full lg:w-56 bg-gray-800 rounded-lg p-4 flex flex-col mb-4 lg:mb-0 lg:ml-4">
+            <h2 class="text-xl font-bold mb-2">ผู้เข้าร่วม</h2>
+            <div id="user-list" class="space-y-2"></div>
+        </div>
+
         <!-- Chat Section -->
         <div id="chat-container" class="w-full lg:w-80 bg-gray-800 rounded-lg p-4 flex flex-col">
             <h2 class="text-2xl font-bold mb-4">Chat</h2>
-            <div id="messages" class="flex-grow h-64 overflow-y-auto mb-4 bg-gray-900 rounded-lg p-2 space-y-2"></div>
+            <div id="messages" class="flex-grow max-h-96 h-64 overflow-y-auto mb-4 bg-gray-900 rounded-lg p-2 space-y-2"></div>
             <div class="flex gap-2">
                 <input type="text" id="message-input" placeholder="Type a message..." class="flex-grow bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
                 <button id="send-message" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg">Send</button>

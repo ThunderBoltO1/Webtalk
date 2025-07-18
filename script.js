@@ -24,7 +24,18 @@ let username = '';
 const nameModal = document.getElementById('name-modal');
 const usernameInput = document.getElementById('username-input');
 const enterChatBtn = document.getElementById('enter-chat-btn');
+const currentUsernameSpan = document.getElementById('current-username');
 const changeNameBtn = document.getElementById('change-name-btn');
+
+function updateUserInfoBar() {
+    if (username) {
+        currentUsernameSpan.textContent = `ชื่อของคุณ: ${username}`;
+        changeNameBtn.style.display = '';
+    } else {
+        currentUsernameSpan.textContent = '';
+        changeNameBtn.style.display = 'none';
+    }
+}
 
 // ฟังก์ชันสำหรับบันทึกชื่อใน localStorage
 function saveUsername(name) {
@@ -43,26 +54,115 @@ function hideNameModal() {
     nameModal.style.display = 'none';
 }
 
-enterChatBtn.addEventListener('click', () => {
+const userListDiv = document.getElementById('user-list');
+let isHost = false;
+
+// ฟังก์ชันอัปเดต/เพิ่ม user ใน Firestore
+async function updateUserOnline() {
+    if (!username) return;
+    await db.collection('users').doc(username).set({
+        name: username,
+        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+        canControl: isHost
+    }, { merge: true });
+}
+
+// อัปเดต lastActive ทุก 30 วินาที
+setInterval(updateUserOnline, 30000);
+
+// เมื่อเข้าห้องหรือเปลี่ยนชื่อ
+async function onUserEnterOrChangeName() {
+    // ตรวจสอบว่ามี host หรือยัง (คนแรกที่เข้าห้องจะเป็น host)
+    const usersSnap = await db.collection('users').get();
+    if (usersSnap.empty) {
+        isHost = true;
+    } else {
+        // ถ้าเคยเป็น host มาก่อน ให้คงสถานะไว้
+        const me = await db.collection('users').doc(username).get();
+        isHost = me.exists && me.data().canControl === true;
+    }
+    await updateUserOnline();
+    updateUserInfoBar();
+    updateControlsAccess();
+}
+
+// ดึงรายชื่อผู้ใช้ที่ออนไลน์ (lastActive < 1 นาที)
+db.collection('users').orderBy('name').onSnapshot(snapshot => {
+    const now = Date.now();
+    userListDiv.innerHTML = '';
+    let foundHost = false;
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        const lastActive = data.lastActive && data.lastActive.toDate ? data.lastActive.toDate().getTime() : 0;
+        if (now - lastActive < 60000) { // 1 นาที
+            // แสดงชื่อและปุ่มมอบสิทธิ์ host (เฉพาะ host เท่านั้นที่เห็นปุ่ม)
+            const userItem = document.createElement('div');
+            userItem.className = 'flex items-center gap-2';
+            userItem.innerHTML = `<span class="${data.canControl ? 'text-green-400 font-bold' : ''}">${escapeHTML(data.name)}</span>`;
+            if (isHost && data.name !== username) {
+                const btn = document.createElement('button');
+                btn.textContent = 'ให้สิทธิ์เลือกคลิป';
+                btn.className = 'bg-purple-500 hover:bg-purple-600 text-white text-xs px-2 py-1 rounded';
+                btn.onclick = async () => {
+                    // มอบสิทธิ์ host ให้ user นี้ และยกเลิกสิทธิ์ตัวเอง
+                    await db.collection('users').get().then(snap => {
+                        snap.forEach(async d => {
+                            await db.collection('users').doc(d.id).update({ canControl: d.id === data.name });
+                        });
+                    });
+                };
+                userItem.appendChild(btn);
+            }
+            if (data.canControl) foundHost = true;
+            userListDiv.appendChild(userItem);
+        }
+    });
+    // ถ้าไม่มี host เลย ให้ host คนแรกที่ออนไลน์
+    if (!foundHost && username) {
+        db.collection('users').doc(username).update({ canControl: true });
+        isHost = true;
+        updateControlsAccess();
+    }
+});
+
+// อัปเดตสิทธิ์การค้นหา/เลือกคลิป
+function updateControlsAccess() {
+    const searchInput = document.getElementById('search-query');
+    const searchBtn = document.getElementById('search-btn');
+    if (isHost) {
+        searchInput.disabled = false;
+        searchBtn.disabled = false;
+        searchBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    } else {
+        searchInput.disabled = true;
+        searchBtn.disabled = true;
+        searchBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+}
+
+enterChatBtn.addEventListener('click', async () => {
     const name = usernameInput.value.trim();
     if (name) {
         username = name;
         saveUsername(name);
         hideNameModal();
+        await onUserEnterOrChangeName();
     } else {
         usernameInput.classList.add('ring-2', 'ring-red-500');
     }
 });
 
 // เมื่อโหลดหน้าเว็บ ให้เช็ค localStorage
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
     const saved = loadUsername();
     if (saved) {
         username = saved;
         hideNameModal();
+        await onUserEnterOrChangeName();
     } else {
         showNameModal();
     }
+    updateUserInfoBar();
 });
 
 // ปุ่มเปลี่ยนชื่อ

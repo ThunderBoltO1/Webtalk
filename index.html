@@ -31,6 +31,15 @@
 </head>
 <body class="bg-gray-900 text-white flex flex-col items-center p-4 font-sans">
 
+    <!-- Modal สำหรับกรอกชื่อ -->
+    <div id="name-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
+        <div class="bg-gray-800 p-8 rounded-lg flex flex-col items-center gap-4">
+            <h2 class="text-2xl font-bold mb-2">กรุณาใส่ชื่อของคุณ</h2>
+            <input type="text" id="username-input" placeholder="ชื่อของคุณ..." class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <button id="enter-chat-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg">เข้าสู่ห้องแชท</button>
+        </div>
+    </div>
+
     <h1 class="text-4xl font-bold mb-4">YouTube Watch Party</h1>
 
     <div class="w-full max-w-4xl flex flex-col lg:flex-row gap-4">

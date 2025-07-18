@@ -15,18 +15,46 @@ async function triggerEvent(event, data) {
     });
 }
 
-// Firestore Chat Setup
+// ----------------------
+// Username Modal Logic
+let username = '';
+const nameModal = document.getElementById('name-modal');
+const usernameInput = document.getElementById('username-input');
+const enterChatBtn = document.getElementById('enter-chat-btn');
+
+function showNameModal() {
+    nameModal.style.display = 'flex';
+}
+function hideNameModal() {
+    nameModal.style.display = 'none';
+}
+
+enterChatBtn.addEventListener('click', () => {
+    const name = usernameInput.value.trim();
+    if (name) {
+        username = name;
+        hideNameModal();
+    } else {
+        usernameInput.classList.add('ring-2', 'ring-red-500');
+    }
+});
+
+// ป้องกันการใช้งานแชทก่อนกรอกชื่อ
+window.addEventListener('DOMContentLoaded', showNameModal);
+
+// ----------------------
+// Firestore Chat Setup (with username)
 const messages = document.getElementById('messages');
 const messageInput = document.getElementById('message-input');
 const sendMessageBtn = document.getElementById('send-message');
 
-// ส่งข้อความไป Firestore
 sendMessageBtn.addEventListener('click', async () => {
     const text = messageInput.value.trim();
-    if (text === '') return;
+    if (text === '' || !username) return;
     try {
         await db.collection('messages').add({
             text: text,
+            username: username,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         messageInput.value = '';
@@ -35,15 +63,15 @@ sendMessageBtn.addEventListener('click', async () => {
     }
 });
 
-// ดึงข้อความจาก Firestore แบบเรียลไทม์
 function renderMessage(doc) {
+    const data = doc.data();
     const item = document.createElement('div');
-    item.textContent = doc.data().text;
+    const name = data.username || 'ไม่ระบุชื่อ';
+    item.textContent = `${name} : ${data.text}`;
     messages.appendChild(item);
     messages.scrollTop = messages.scrollHeight;
 }
 
-// clear messages ก่อนแสดงใหม่
 function clearMessages() {
     messages.innerHTML = '';
 }
@@ -68,7 +96,7 @@ function onYouTubeIframeAPIReady() {
     });
 }
 
-const YOUTUBE_API_KEY = 'YOUR_API_KEY_HERE'; // IMPORTANT: Replace with your YouTube Data API key
+const YOUTUBE_API_KEY = 'AIzaSyDC80-0eP7mC4kFBRlcIsLqq82yYoH2osw'; // IMPORTANT: Replace with your YouTube Data API key
 
 const searchInput = document.getElementById('search-query');
 const searchBtn = document.getElementById('search-btn');

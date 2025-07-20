@@ -8,12 +8,21 @@ const channel = pusher.subscribe('watch-party');
 async function triggerEvent(event, data) {
     // ใช้ triggerEvent เฉพาะ video-event เท่านั้น
     if (event === 'video-event') {
+        // Add username to the data to identify the sender
+        const eventData = {
+            ...data,
+            username: username  // Add current username to the event data
+        };
         await fetch('/api/pusher/trigger', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ channel: 'watch-party', event, data }),
+            body: JSON.stringify({ 
+                channel: 'watch-party', 
+                event, 
+                data: eventData 
+            }),
         });
     }
 }
@@ -60,6 +69,16 @@ let isHost = false;
 // ฟังก์ชันอัปเดต/เพิ่ม user ใน Firestore
 async function updateUserOnline() {
     if (!username) return;
+    
+    // ตรวจสอบว่ามีผู้ใช้ในห้องหรือไม่
+    const usersSnap = await db.collection('users').get();
+    const isFirstUser = usersSnap.empty;
+    
+    // ถ้าเป็นคนแรกที่เข้าห้อง ให้เป็น host โดยอัตโนมัติ
+    if (isFirstUser) {
+        isHost = true;
+    }
+    
     await db.collection('users').doc(username).set({
         name: username,
         lastActive: firebase.firestore.FieldValue.serverTimestamp(),
@@ -72,71 +91,138 @@ setInterval(updateUserOnline, 30000);
 
 // เมื่อเข้าห้องหรือเปลี่ยนชื่อ
 async function onUserEnterOrChangeName() {
-    // ตรวจสอบว่ามี host หรือยัง (คนแรกที่เข้าห้องจะเป็น host)
+    // ตรวจสอบว่ามีผู้ใช้ในห้องหรือไม่
     const usersSnap = await db.collection('users').get();
-    if (usersSnap.empty) {
+    const isFirstUser = usersSnap.empty;
+    
+    // ถ้าเป็นคนแรกที่เข้าห้อง ให้เป็น host โดยอัตโนมัติ
+    if (isFirstUser) {
         isHost = true;
     } else {
-        // ถ้าเคยเป็น host มาก่อน ให้คงสถานะไว้
+        // ถ้าไม่ใช่คนแรก ตรวจสอบว่าเคยเป็น host มาก่อนหรือไม่
         const me = await db.collection('users').doc(username).get();
         isHost = me.exists && me.data().canControl === true;
     }
+    
     await updateUserOnline();
     updateUserInfoBar();
     updateControlsAccess();
 }
 
 // ดึงรายชื่อผู้ใช้ที่ออนไลน์ (lastActive < 1 นาที)
-db.collection('users').orderBy('name').onSnapshot(snapshot => {
+db.collection('users').orderBy('name').onSnapshot(async (snapshot) => {
     const now = Date.now();
     userListDiv.innerHTML = '';
     let foundHost = false;
+    
+    // เก็บข้อมูลผู้ใช้ทั้งหมดที่ออนไลน์
+    const onlineUsers = [];
+    
     snapshot.forEach(doc => {
         const data = doc.data();
         const lastActive = data.lastActive && data.lastActive.toDate ? data.lastActive.toDate().getTime() : 0;
         if (now - lastActive < 60000) { // 1 นาที
-            // แสดงชื่อและปุ่มมอบสิทธิ์ host (เฉพาะ host เท่านั้นที่เห็นปุ่ม)
-            const userItem = document.createElement('div');
-            userItem.className = 'flex items-center gap-2';
-            userItem.innerHTML = `<span class="${data.canControl ? 'text-green-400 font-bold' : ''}">${escapeHTML(data.name)}</span>`;
-            if (isHost && data.name !== username) {
-                const btn = document.createElement('button');
-                btn.textContent = 'ให้สิทธิ์เลือกคลิป';
-                btn.className = 'bg-purple-500 hover:bg-purple-600 text-white text-xs px-2 py-1 rounded';
-                btn.onclick = async () => {
-                    // มอบสิทธิ์ host ให้ user นี้ และยกเลิกสิทธิ์ตัวเอง
-                    await db.collection('users').get().then(snap => {
-                        snap.forEach(async d => {
-                            await db.collection('users').doc(d.id).update({ canControl: d.id === data.name });
-                        });
-                    });
-                };
-                userItem.appendChild(btn);
+            onlineUsers.push({
+                ...data,
+                id: doc.id
+            });
+            
+            // ตรวจสอบว่าตัวเองเป็น host หรือไม่
+            if (data.name === username && data.canControl) {
+                isHost = true;
+                foundHost = true;
+            } else if (data.canControl) {
+                foundHost = true;
             }
-            if (data.canControl) foundHost = true;
-            userListDiv.appendChild(userItem);
         }
     });
-    // ถ้าไม่มี host เลย ให้ host คนแรกที่ออนไลน์
-    if (!foundHost && username) {
-        db.collection('users').doc(username).update({ canControl: true });
-        isHost = true;
-        updateControlsAccess();
+    
+    // แสดงรายชื่อผู้ใช้
+    onlineUsers.forEach(user => {
+        const userItem = document.createElement('div');
+        userItem.className = 'flex items-center justify-between gap-2';
+        userItem.innerHTML = `
+            <span class="${user.canControl ? 'text-green-400 font-bold' : ''}">
+                ${escapeHTML(user.name)}
+                ${user.canControl ? ' (ผู้ควบคุม)' : ''}
+            </span>
+        `;
+        
+        // แสดงปุ่มให้สิทธิ์เฉพาะ host ปัจจุบันเท่านั้น
+        if (isHost && user.name !== username) {
+            const btn = document.createElement('button');
+            btn.textContent = 'ส่งต่อสิทธิ์';
+            btn.className = 'bg-purple-500 hover:bg-purple-600 text-white text-xs px-2 py-1 rounded';
+            btn.onclick = async () => {
+                // ยืนยันการโอนสิทธิ์
+                if (confirm(`ยืนยันที่จะมอบสิทธิ์ควบคุมให้กับ ${user.name} ใช่หรือไม่?`)) {
+                    // ปิดสิทธิ์ host จากทุกคน
+                    const batch = db.batch();
+                    onlineUsers.forEach(u => {
+                        const userRef = db.collection('users').doc(u.id);
+                        batch.update(userRef, { canControl: false });
+                    });
+                    
+                    // มอบสิทธิ์ให้กับผู้ใช้ที่เลือก
+                    const newHostRef = db.collection('users').doc(user.id);
+                    batch.update(newHostRef, { canControl: true });
+                    
+                    // บันทึกการเปลี่ยนแปลงทั้งหมด
+                    await batch.commit();
+                    
+                    // อัปเดตสถานะ host ของตัวเอง
+                    isHost = false;
+                    updateControlsAccess();
+                    updateUserInfoBar();
+                }
+            };
+            userItem.appendChild(btn);
+        }
+        
+        userListDiv.appendChild(userItem);
+    });
+    
+    // ถ้าไม่มี host เลย และมีผู้ใช้ในห้อง
+    if (!foundHost && onlineUsers.length > 0) {
+        // ให้คนแรกในรายการเป็น host
+        const firstUser = onlineUsers[0];
+        await db.collection('users').doc(firstUser.id).update({ 
+            canControl: true 
+        });
+        
+        // ถ้าเป็นเรา ให้อัปเดตสถานะด้วย
+        if (firstUser.name === username) {
+            isHost = true;
+            updateControlsAccess();
+        }
     }
+    
+    // อัปเดต UI ตามสถานะ host ปัจจุบัน
+    updateControlsAccess();
+    updateUserInfoBar();
 });
 
 // อัปเดตสิทธิ์การค้นหา/เลือกคลิป
 function updateControlsAccess() {
     const searchInput = document.getElementById('search-query');
     const searchBtn = document.getElementById('search-btn');
+    
     if (isHost) {
         searchInput.disabled = false;
         searchBtn.disabled = false;
+        searchInput.placeholder = 'ค้นหาวิดีโอ...';
         searchBtn.classList.remove('opacity-50', 'cursor-not-allowed');
     } else {
         searchInput.disabled = true;
         searchBtn.disabled = true;
+        searchInput.placeholder = 'เฉพาะผู้ควบคุมเท่านั้นที่สามารถค้นหาได้';
         searchBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+    
+    // อัปเดตปุ่มเปลี่ยนชื่อ
+    const changeNameBtn = document.getElementById('change-name-btn');
+    if (changeNameBtn) {
+        changeNameBtn.style.display = username ? 'block' : 'none';
     }
 }
 
@@ -349,7 +435,15 @@ function onPlayerStateChange(event) {
     }
 }
 
-// (ลบหรือคอมเมนต์ channel.bind('chat-message', ...); ออก เพราะไม่ใช้ Pusher กับแชท)
+// Listen for video events from other clients
+channel.bind('video-event', function(data) {
+    if (data && data.type) {
+        // Only handle the event if it's not from the current user
+        if (data.username !== username) {
+            handleVideoEvent(data);
+        }
+    }
+});
 
 // ตัวอย่างทดสอบ YouTube API (สามารถลบออกได้หลังทดสอบ)
 // (ลบออก)

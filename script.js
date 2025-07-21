@@ -326,40 +326,7 @@ function renderMessage(doc) {
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
     
-    // ตรวจสอบว่าต้องแสดงวันที่หรือไม่
-    let showDate = false;
-    if (!lastRenderedMessage) {
-        showDate = true; // ข้อความแรกให้แสดงวันที่
-    } else {
-        const lastDate = lastRenderedMessage.timestamp.toDate ? 
-                        lastRenderedMessage.timestamp.toDate() : 
-                        new Date(lastRenderedMessage.timestamp.seconds * 1000);
-        
-        // ตรวจสอบว่าเป็นคนละวันหรือไม่
-        showDate = timestamp.getDate() !== lastDate.getDate() ||
-                  timestamp.getMonth() !== lastDate.getMonth() ||
-                  timestamp.getFullYear() !== lastDate.getFullYear();
-    }
-    
-    // แสดงวันที่ถ้าจำเป็น
-    if (showDate) {
-        const dateDiv = document.createElement('div');
-        dateDiv.className = 'text-center text-xs text-gray-400 my-2';
-        
-        if (timestamp.toDateString() === now.toDateString()) {
-            dateDiv.textContent = 'วันนี้';
-        } else if (timestamp.toDateString() === yesterday.toDateString()) {
-            dateDiv.textContent = 'เมื่อวานนี้';
-        } else {
-            dateDiv.textContent = timestamp.toLocaleDateString('th-TH', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-        }
-        
-        messages.appendChild(dateDiv);
-    }
+    // ไม่ต้องแสดงวันที่ในแชทอีกต่อไป
     
     // Format เวลา
     const timeString = timestamp.toLocaleTimeString('th-TH', { 
@@ -426,19 +393,21 @@ function createYouTubePlayer(videoId) {
         return;
     }
     
-    console.log('Player element found, initializing YouTube player...');
+    console.log('Player element found, creating player...');
     
+    // ใช้ domain ที่เป็น privacy-enhanced mode
     player = new YT.Player('player', {
         height: '360',
         width: '640',
         videoId: videoId,
+        host: 'https://www.youtube-nocookie.com',
         playerVars: {
-            'playsinline': 1,
             'origin': window.location.origin,
             'enablejsapi': 1,
             'widget_referrer': window.location.href,
-            'rel': 0, // ปิดวิดีโอแนะนำเมื่อจบ
-            'modestbranding': 1 // ซ่อนโลโก้ YouTube
+            'rel': 0,
+            'modestbranding': 1, // ซ่อนโลโก้ YouTube
+            'playsinline': 1
         },
         events: {
             'onReady': function(event) {

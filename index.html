@@ -1,10 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Watch Party</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // ตรวจสอบโหมดที่ผู้ใช้เลือกไว้ล่าสุด
+        if (localStorage.getItem('color-theme') === 'dark' || 
+            (!localStorage.getItem('color-theme') && 
+            window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <style>
+        /* Smooth transitions for theme changes */
+        html, body, #app {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+    </style>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
@@ -23,7 +39,7 @@
   const db = firebase.firestore();
 </script>
 </head>
-<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen text-white flex flex-col items-center p-4 font-sans">
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-white flex flex-col items-center p-4 font-sans">
 
     <!-- ชื่อผู้ใช้ที่มุมขวาบน -->
     <div id="user-info-bar" class="fixed top-4 right-4 flex items-center gap-2 z-50 bg-gray-800 dark:bg-gray-900 bg-opacity-80 px-4 py-2 rounded-full shadow-lg border border-gray-700">
@@ -52,8 +68,8 @@
 
     <div class="w-full max-w-5xl flex flex-col lg:flex-row gap-6">
         <!-- Video and Search Section -->
-        <div class="flex-grow bg-gray-800 rounded-2xl shadow-lg p-6 mb-6 lg:mb-0 border border-gray-700">
-            <div id="video-container" class="aspect-video bg-black mb-4 rounded-xl overflow-hidden shadow">
+        <div class="flex-grow bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6 lg:mb-0 border border-gray-200 dark:border-gray-700">
+            <div id="video-container" class="aspect-video bg-gray-900 mb-4 rounded-xl overflow-hidden shadow">
                 <div id="player"></div>
             </div>
 
@@ -82,17 +98,19 @@
         </div>
 
         <!-- Chat Section -->
-        <div id="chat-container" class="w-full lg:w-96 bg-gray-800 rounded-2xl p-6 flex flex-col shadow-lg border border-gray-700">
-            <h2 class="text-2xl font-bold mb-4 text-pink-400">Chat</h2>
-            <div id="messages" class="flex-grow max-h-96 h-64 overflow-y-auto mb-4 bg-gray-900 rounded-lg p-2 space-y-2 border border-gray-700 shadow-inner">
-                <div id="messages-empty" class="text-gray-400 text-center text-sm">ยังไม่มีข้อความ</div>
+        <div class="flex-1 flex flex-col border-t border-gray-200 dark:border-gray-700">
+            <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-white dark:bg-gray-800">
+                <!-- Messages will appear here -->
             </div>
-            <div class="flex gap-2">
-                <input type="text" id="message-input" placeholder="Type a message..." class="flex-grow bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500 text-lg transition duration-200">
-                <button id="send-message" class="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-bold py-2 px-6 rounded-lg shadow transition duration-200">Send</button>
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <div class="flex items-center">
+                    <input type="text" id="message-input" placeholder="พิมพ์ข้อความ..." class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-gray-300 dark:border-gray-600">
+                    <button id="send-message" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-r-lg transition duration-200">
+                        ส่ง
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
 
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="script.js"></script>

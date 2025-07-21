@@ -330,29 +330,78 @@ if (typeof db !== 'undefined') {
 } else {
     alert('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณารีเฟรชหน้าเว็บ');
 }
-
-// YouTube Player
 let player;
 let playerReady = false;
 let pendingVideoEvent = null;
+let currentVideoId = 'M7lc1UVf-VE'; // Default video ID
+let isSyncing = false; // ป้องกันการวนลูป sync
 
-function onYouTubeIframeAPIReady() {
-    player = new YT.Player('player', {
+// ฟังก์ชันสำหรับสร้าง YouTube Player
+function createYouTubePlayer(videoId) {
+    console.log('Creating YouTube player with videoId:', videoId);
+    
+    // ตรวจสอบว่ามี element นี้จริงๆ
+    const playerElement = document.getElementById('youtube-player');
+    if (!playerElement) {
+        console.error('youtube-player element not found!');
+        return;
+    }
+    
+    console.log('Player element found, initializing YouTube player...');
+    
+    player = new YT.Player('youtube-player', {
         height: '360',
         width: '640',
-        videoId: 'M7lc1UVf-VE', // Default video
+        videoId: videoId,
+        playerVars: {
+            'playsinline': 1,
+            'origin': window.location.origin,
+            'enablejsapi': 1,
+            'widget_referrer': window.location.href,
+            'rel': 0, // ปิดวิดีโอแนะนำเมื่อจบ
+            'modestbranding': 1 // ซ่อนโลโก้ YouTube
+        },
         events: {
-            'onReady': () => {
-                playerReady = true;
-                // ถ้ามี event ที่รอไว้ ให้ execute เลย
-                if (pendingVideoEvent) {
-                    handleVideoEvent(pendingVideoEvent);
-                    pendingVideoEvent = null;
+            'onReady': function(event) {
+                console.log('YouTube Player is ready');
+                if (typeof onPlayerReady === 'function') {
+                    onPlayerReady(event);
                 }
             },
-            'onStateChange': onPlayerStateChange
+            'onStateChange': function(event) {
+                console.log('Player state changed:', event.data);
+                if (typeof onPlayerStateChange === 'function') {
+                    onPlayerStateChange(event);
+                }
+            },
+            'onError': function(error) {
+                console.error('YouTube Player Error:', error);
+                if (typeof onPlayerError === 'function') {
+                    onPlayerError(error);
+                }
+            }
         }
     });
+}
+
+function onPlayerReady(event) {
+    console.log('YouTube Player is ready');
+    playerReady = true;
+    
+    // ถ้ามี event ที่รออยู่ ให้ execute เลย
+    if (pendingVideoEvent) {
+        handleVideoEvent(pendingVideoEvent);
+        pendingVideoEvent = null;
+    }
+    
+    // แจ้งให้ผู้ใช้ทราบถ้าเป็น host
+    if (isHost) {
+        console.log('คุณเป็นผู้ควบคุมการเล่นวิดีโอ');
+    }
+}
+
+function onPlayerError(error) {
+    console.error('YouTube Player Error:', error);
 }
 
 // ฟังก์ชันนี้ใช้สำหรับ handle event จาก Pusher
@@ -361,30 +410,123 @@ function handleVideoEvent(data) {
         pendingVideoEvent = data;
         return;
     }
-    switch (data.type) {
-        case 'load':
-            // ถ้า videoId เดียวกับที่เล่นอยู่แล้ว ไม่ต้อง load ซ้ำ
-            if (player.getVideoData && player.getVideoData().video_id === data.videoId) return;
-            player.loadVideoById(data.videoId);
-            break;
-        case 'play':
-            // sync play เฉพาะเมื่อ player ไม่ได้เล่นอยู่
-            if (player && typeof player.seekTo === 'function') {
-                if (player.getPlayerState && player.getPlayerState() !== YT.PlayerState.PLAYING) {
+    
+    // ตรวจสอบว่าเป็น event จากตัวเองหรือไม่
+    if (data.username === username) return;
+    
+    // ตั้งค่าสถานะกำลัง sync
+    isSyncing = true;
+    
+    try {
+        switch (data.type) {
+            case 'load':
+                // ตรวจสอบว่าเป็นวิดีโอใหม่หรือไม่
+                if (player.getVideoData && player.getVideoData().video_id !== data.videoId) {
+                    console.log('Loading new video:', data.videoId);
+                    currentVideoId = data.videoId;
+                    player.loadVideoById(data.videoId);
+                }
+                break;
+                
+            case 'play':
+                if (player && typeof player.seekTo === 'function') {
+                    const currentState = player.getPlayerState();
+                    if (currentState !== YT.PlayerState.PLAYING) {
+                        console.log('Syncing play at time:', data.currentTime);
+                        player.seekTo(data.currentTime, true);
+                        setTimeout(() => {
+                            player.playVideo();
+                        }, 100);
+                    }
+                }
+                break;
+                
+            case 'pause':
+                if (player && typeof player.pauseVideo === 'function') {
+                    const currentState = player.getPlayerState();
+                    if (currentState === YT.PlayerState.PLAYING) {
+                        console.log('Syncing pause');
+                        player.pauseVideo();
+                    }
+                }
+                break;
+                
+            case 'seek':
+                if (player && typeof player.seekTo === 'function') {
+                    console.log('Syncing seek to:', data.currentTime);
                     player.seekTo(data.currentTime, true);
-                    player.playVideo();
                 }
-            }
-            break;
-        case 'pause':
-            // sync pause เฉพาะเมื่อ player กำลังเล่น
-            if (player && typeof player.pauseVideo === 'function') {
-                if (player.getPlayerState && player.getPlayerState() === YT.PlayerState.PLAYING) {
-                    player.pauseVideo();
-                }
-            }
-            break;
+                break;
+        }
+    } catch (error) {
+        console.error('Error handling video event:', error);
+    } finally {
+        // รีเซ็ตสถานะ sync
+        setTimeout(() => {
+            isSyncing = false;
+        }, 500);
     }
+}
+
+// ฟังก์ชันสำหรับส่ง event ไปยังผู้ใช้คนอื่น
+async function broadcastVideoEvent(eventType, data = {}) {
+    if (isSyncing) return; // ไม่ต้องส่ง event ถ้ากำลัง sync อยู่
+    
+    const eventData = {
+        type: eventType,
+        username: username,
+        videoId: currentVideoId,
+        ...data
+    };
+    
+    await triggerEvent('video-event', eventData);
+}
+
+function onPlayerStateChange(event) {
+    if (!isHost || isSyncing) return; // ไม่ต้องทำอะไรถ้าไม่ใช่ host หรือกำลัง sync อยู่
+    console.log('Player state changed:', event.data);
+    
+    const currentTime = player.getCurrentTime();
+    const now = Date.now();
+    
+    // ตรวจสอบว่า state เปลี่ยนหรือไม่
+    if (event.data !== lastState) {
+        console.log('Player state changed:', getStateName(event.data));
+        lastState = event.data;
+        
+        switch (event.data) {
+            case YT.PlayerState.PLAYING:
+                broadcastVideoEvent('play', { currentTime: currentTime });
+                break;
+                
+            case YT.PlayerState.PAUSED:
+                broadcastVideoEvent('pause', { currentTime: currentTime });
+                break;
+                
+            case YT.PlayerState.ENDED:
+                broadcastVideoEvent('pause', { currentTime: 0 });
+                break;
+        }
+    }
+    
+    // อัปเดตเวลาเล่นทุก 1 วินาที
+    if (now - lastTimeUpdate > 1000 && event.data === YT.PlayerState.PLAYING) {
+        lastTimeUpdate = now;
+        broadcastVideoEvent('seek', { currentTime: currentTime });
+    }
+}
+
+// ฟังก์ชันช่วยแปลง state เป็นชื่อ
+function getStateName(state) {
+    const states = {
+        [-1]: 'UNSTARTED',
+        0: 'ENDED',
+        1: 'PLAYING',
+        2: 'PAUSED',
+        3: 'BUFFERING',
+        5: 'VIDEO_CUED'
+    };
+    return states[state] || 'UNKNOWN';
 }
 
 const YOUTUBE_API_KEY = 'AIzaSyDC80-0eP7mC4kFBRlcIsLqq82yYoH2osw'; // IMPORTANT: Replace with your YouTube Data API key
@@ -417,33 +559,130 @@ function displaySearchResults(videos) {
             <img src="${video.snippet.thumbnails.default.url}" alt="${video.snippet.title}" class="w-32 h-18 object-cover rounded">
             <p class="flex-grow">${video.snippet.title}</p>
         `;
-        result.addEventListener('click', () => {
+        result.addEventListener('click', async () => {
+            if (!isHost) return; // ตรวจสอบสิทธิ์การควบคุม
+            
+            function loadVideo(videoId) {
+                console.log('loadVideo called with videoId:', videoId);
+                if (!videoId) {
+                    console.error('No videoId provided');
+                    return;
+                }
+                
+                currentVideoId = videoId;
+                
+                // ส่ง event ไปยังผู้ใช้คนอื่น
+                console.log('Broadcasting load event for video:', videoId);
+                broadcastVideoEvent('load', { 
+                    videoId: videoId,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // โหลดวิดีโอในเครื่องตัวเอง
+                if (player) {
+                    console.log('Loading video in existing player');
+                    player.loadVideoById(videoId);
+                } else {
+                    // ถ้ายังไม่มี player ให้สร้างใหม่
+                    console.log('Creating new YouTube player');
+                    createYouTubePlayer(videoId);
+                }
+            }
+            
             const videoId = video.id.videoId;
-            player.loadVideoById(videoId);
-            triggerEvent('video-event', { type: 'load', videoId });
-            searchResultsContainer.innerHTML = ''; // Clear results
+            loadVideo(videoId);
+            
+            // ล้างผลการค้นหา
+            searchResultsContainer.innerHTML = '';
+            searchInput.value = '';
+            
+            // แจ้งเตือนผู้ใช้
+            alert('กำลังโหลดวิดีโอใหม่ กรุณารอสักครู่...');
         });
         searchResultsContainer.appendChild(result);
     });
 }
 
+// ตัวแปรสำหรับติดตามสถานะการเล่นวิดีโอ
+let lastState = -1;
+let lastTimeUpdate = 0;
+
+// ฟังก์ชันหลักสำหรับจัดการการเปลี่ยนแปลงสถานะวิดีโอ
 function onPlayerStateChange(event) {
-    if (event.data === YT.PlayerState.PLAYING) {
-        triggerEvent('video-event', { type: 'play', currentTime: player.getCurrentTime() });
-    } else if (event.data === YT.PlayerState.PAUSED) {
-        triggerEvent('video-event', { type: 'pause' });
+    if (!isHost || isSyncing) return; // ไม่ต้องทำอะไรถ้าไม่ใช่ host หรือกำลัง sync อยู่
+    
+    const currentTime = player.getCurrentTime();
+    const now = Date.now();
+    
+    // ตรวจสอบว่า state เปลี่ยนหรือไม่
+    if (event.data !== lastState) {
+        console.log('Player state changed:', getStateName(event.data));
+        lastState = event.data;
+        
+        switch (event.data) {
+            case YT.PlayerState.PLAYING:
+                broadcastVideoEvent('play', { currentTime: currentTime });
+                break;
+                
+            case YT.PlayerState.PAUSED:
+                broadcastVideoEvent('pause', { currentTime: currentTime });
+                break;
+                
+            case YT.PlayerState.ENDED:
+                broadcastVideoEvent('pause', { currentTime: 0 });
+                break;
+        }
+    }
+    
+    // อัปเดตเวลาเล่นทุก 1 วินาที
+    if (now - lastTimeUpdate > 1000 && event.data === YT.PlayerState.PLAYING) {
+        lastTimeUpdate = now;
+        broadcastVideoEvent('seek', { currentTime: currentTime });
     }
 }
 
-// Listen for video events from other clients
-channel.bind('video-event', function(data) {
-    if (data && data.type) {
-        // Only handle the event if it's not from the current user
-        if (data.username !== username) {
-            handleVideoEvent(data);
+// ฟังก์ชันช่วยแปลง state เป็นชื่อ
+function getStateName(state) {
+    const states = {
+        [-1]: 'UNSTARTED',
+        0: 'ENDED',
+        1: 'PLAYING',
+        2: 'PAUSED',
+        3: 'BUFFERING',
+        5: 'VIDEO_CUED'
+    };
+    return states[state] || 'UNKNOWN';
+}
+
+// ฟังก์ชันสำหรับส่ง event ไปยังผู้ใช้คนอื่น
+async function broadcastVideoEvent(eventType, data = {}) {
+    if (isSyncing) return; // ไม่ต้องส่ง event ถ้ากำลัง sync อยู่
+    
+    const eventData = {
+        type: eventType,
+        username: username,
+        videoId: currentVideoId,
+        ...data
+    };
+    
+    await triggerEvent('video-event', eventData);
+}
+
+// ฟังก์ชันสำหรับจัดการ event จากผู้ใช้คนอื่น
+function setupVideoEventListeners() {
+    channel.bind('video-event', function(data) {
+        if (data && data.type) {
+            // ตรวจสอบว่าเป็น event จากคนอื่นเท่านั้น
+            if (data.username !== username) {
+                console.log('Received video event:', data.type, 'from:', data.username);
+                handleVideoEvent(data);
+            }
         }
-    }
-});
+    });
+}
+
+// เรียกใช้งานฟังก์ชันตั้งค่า event listeners
+setupVideoEventListeners();
 
 // ตัวอย่างทดสอบ YouTube API (สามารถลบออกได้หลังทดสอบ)
 // (ลบออก)

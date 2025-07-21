@@ -303,10 +303,13 @@ function escapeHTML(str) {
     });
 }
 
+// ตัวแปรเก็บข้อความล่าสุด
+let lastRenderedMessage = null;
+
 function renderMessage(doc) {
     const data = doc.data();
     const item = document.createElement('div');
-    item.className = 'message-container mb-2';
+    item.className = 'message-container mb-1';
     
     const name = escapeHTML(data.username || 'ไม่ระบุชื่อ');
     const text = escapeHTML(data.text);
@@ -323,23 +326,54 @@ function renderMessage(doc) {
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
     
-    let timeString = '';
-    const timeOptions = { hour: '2-digit', minute: '2-digit' };
-    
-    if (timestamp.toDateString() === now.toDateString()) {
-        timeString = timestamp.toLocaleTimeString('th-TH', timeOptions);
-    } else if (timestamp.toDateString() === yesterday.toDateString()) {
-        timeString = `เมื่อวานนี้ ${timestamp.toLocaleTimeString('th-TH', timeOptions)}`;
+    // ตรวจสอบว่าต้องแสดงวันที่หรือไม่
+    let showDate = false;
+    if (!lastRenderedMessage) {
+        showDate = true; // ข้อความแรกให้แสดงวันที่
     } else {
-        const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
-        timeString = `${timestamp.toLocaleDateString('th-TH', dateOptions)} ${timestamp.toLocaleTimeString('th-TH', timeOptions)}`;
+        const lastDate = lastRenderedMessage.timestamp.toDate ? 
+                        lastRenderedMessage.timestamp.toDate() : 
+                        new Date(lastRenderedMessage.timestamp.seconds * 1000);
+        
+        // ตรวจสอบว่าเป็นคนละวันหรือไม่
+        showDate = timestamp.getDate() !== lastDate.getDate() ||
+                  timestamp.getMonth() !== lastDate.getMonth() ||
+                  timestamp.getFullYear() !== lastDate.getFullYear();
     }
     
+    // แสดงวันที่ถ้าจำเป็น
+    if (showDate) {
+        const dateDiv = document.createElement('div');
+        dateDiv.className = 'text-center text-xs text-gray-400 my-2';
+        
+        if (timestamp.toDateString() === now.toDateString()) {
+            dateDiv.textContent = 'วันนี้';
+        } else if (timestamp.toDateString() === yesterday.toDateString()) {
+            dateDiv.textContent = 'เมื่อวานนี้';
+        } else {
+            dateDiv.textContent = timestamp.toLocaleDateString('th-TH', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+        
+        messages.appendChild(dateDiv);
+    }
+    
+    // Format เวลา
+    const timeString = timestamp.toLocaleTimeString('th-TH', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+    
     item.innerHTML = `
-        <div class="message-bubble bg-gray-700 rounded-2xl p-3 max-w-xs lg:max-w-md inline-block">
-            <div class="font-bold text-yellow-300">${name}</div>
-            <div class="message-text">${text}</div>
-            <div class="message-time text-xs text-gray-400 text-right mt-1">${timeString}</div>
+        <div class="message-bubble inline-block max-w-xs lg:max-w-md bg-gray-700 rounded-xl px-4 py-2">
+            ${data.username !== username ? `<div class="font-bold text-sm text-pink-300">${name}</div>` : ''}
+            <div class="message-text text-white">${text}</div>
+            <div class="text-right">
+                <span class="text-xs text-gray-400">${timeString}</span>
+            </div>
         </div>
     `;
     
@@ -386,15 +420,15 @@ function createYouTubePlayer(videoId) {
     console.log('Creating YouTube player with videoId:', videoId);
     
     // ตรวจสอบว่ามี element นี้จริงๆ
-    const playerElement = document.getElementById('youtube-player');
+    const playerElement = document.getElementById('player');
     if (!playerElement) {
-        console.error('youtube-player element not found!');
+        console.error('player element not found!');
         return;
     }
     
     console.log('Player element found, initializing YouTube player...');
     
-    player = new YT.Player('youtube-player', {
+    player = new YT.Player('player', {
         height: '360',
         width: '640',
         videoId: videoId,

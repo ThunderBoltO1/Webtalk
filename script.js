@@ -306,11 +306,56 @@ function escapeHTML(str) {
 function renderMessage(doc) {
     const data = doc.data();
     const item = document.createElement('div');
+    item.className = 'message-container mb-2';
+    
     const name = escapeHTML(data.username || 'ไม่ระบุชื่อ');
     const text = escapeHTML(data.text);
-    item.textContent = `${name} : ${text}`;
+    
+    // Format timestamp
+    let timestamp = new Date();
+    if (data.timestamp && data.timestamp.toDate) {
+        timestamp = data.timestamp.toDate();
+    } else if (data.timestamp?.seconds) {
+        timestamp = new Date(data.timestamp.seconds * 1000);
+    }
+    
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    let timeString = '';
+    const timeOptions = { hour: '2-digit', minute: '2-digit' };
+    
+    if (timestamp.toDateString() === now.toDateString()) {
+        timeString = timestamp.toLocaleTimeString('th-TH', timeOptions);
+    } else if (timestamp.toDateString() === yesterday.toDateString()) {
+        timeString = `เมื่อวานนี้ ${timestamp.toLocaleTimeString('th-TH', timeOptions)}`;
+    } else {
+        const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+        timeString = `${timestamp.toLocaleDateString('th-TH', dateOptions)} ${timestamp.toLocaleTimeString('th-TH', timeOptions)}`;
+    }
+    
+    item.innerHTML = `
+        <div class="message-bubble bg-gray-700 rounded-2xl p-3 max-w-xs lg:max-w-md inline-block">
+            <div class="font-bold text-yellow-300">${name}</div>
+            <div class="message-text">${text}</div>
+            <div class="message-time text-xs text-gray-400 text-right mt-1">${timeString}</div>
+        </div>
+    `;
+    
+    // Add different styling for current user's messages
+    if (data.username === username) {
+        item.classList.add('text-right');
+        item.querySelector('.message-bubble').classList.add('ml-auto', 'bg-blue-600');
+        item.querySelector('.message-text').classList.add('text-white');
+    }
+    
     messages.appendChild(item);
     messages.scrollTop = messages.scrollHeight;
+    
+    // Hide the empty message placeholder if it exists
+    const emptyMsg = document.getElementById('messages-empty');
+    if (emptyMsg) emptyMsg.style.display = 'none';
 }
 
 function clearMessages() {

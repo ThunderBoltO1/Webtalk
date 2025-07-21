@@ -1,3 +1,37 @@
+// Dark/Light Mode Toggle
+const themeToggleBtn = document.getElementById('theme-toggle');
+const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+// Check for saved user preference, if any, on load
+const savedTheme = localStorage.getItem('color-theme') || 
+    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+// Apply the saved theme
+if (savedTheme === 'dark') {
+    document.documentElement.classList.add('dark');
+    themeToggleLightIcon.classList.remove('hidden');
+} else {
+    document.documentElement.classList.remove('dark');
+    themeToggleDarkIcon.classList.remove('hidden');
+}
+
+// Toggle theme when button is clicked
+themeToggleBtn.addEventListener('click', () => {
+    // Toggle icons
+    themeToggleDarkIcon.classList.toggle('hidden');
+    themeToggleLightIcon.classList.toggle('hidden');
+    
+    // Toggle theme
+    if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('color-theme', 'light');
+    } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('color-theme', 'dark');
+    }
+});
+
 // Pusher setup
 const pusher = new Pusher('37361f4cd7d0f575faac', { // IMPORTANT: Replace with your Pusher key
     cluster: 'ap1' // IMPORTANT: Replace with your Pusher cluster

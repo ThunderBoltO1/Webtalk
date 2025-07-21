@@ -326,13 +326,27 @@ function renderMessage(doc) {
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
     
-    // ไม่ต้องแสดงวันที่ในแชทอีกต่อไป
+    // Format วันที่และเวลา
+    const currentDate = new Date();
+    let timeString = '';
     
-    // Format เวลา
-    const timeString = timestamp.toLocaleTimeString('th-TH', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-    });
+    // ตรวจสอบว่าเป็นวันเดียวกันหรือไม่
+    if (timestamp.toDateString() === currentDate.toDateString()) {
+        // ถ้าวันนี้ แสดงแค่เวลา
+        timeString = timestamp.toLocaleTimeString('th-TH', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+    } else {
+        // ถ้าไม่ใช่วันนี้ แสดงวันที่และเวลา
+        timeString = `${timestamp.toLocaleDateString('th-TH', {
+            month: 'short',
+            day: 'numeric'
+        })} ${timestamp.toLocaleTimeString('th-TH', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        })}`;
+    }
     
     item.innerHTML = `
         <div class="message-bubble inline-block max-w-xs lg:max-w-md bg-gray-700 rounded-xl px-4 py-2">
